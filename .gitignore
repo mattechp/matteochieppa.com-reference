@@ -1,1 +1,2 @@
-# nothing to ignore; push adds README, logs/, blog
+.gitignore
+push.sh
