@@ -2,4 +2,10 @@
 
 Dated notes. One file: **logs.json** — updated when the site’s Logs page changes. No app code.
 
-To push updates: from this folder run `./push.sh`. Pushes only **README.md** and **logs.json** to `mattechp/matteochieppa.com-reference` (author: mattechp).
+**Push to the reference repo** (`mattechp/matteochieppa.com-reference`):
+
+```bash
+./push.sh
+```
+
+Pushes only **README.md** and **logs.json** to that repo.
