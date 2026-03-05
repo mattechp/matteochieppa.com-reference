@@ -1,0 +1,7 @@
+{
+  "id": "note-2",
+  "date": "2026-02-15",
+  "dateTime": "2026-02-15T09:30:00Z",
+  "category": "tool",
+  "content": "n8n keeps showing up as the default for automation: workflows, webhooks, glue between APIs. It's not the prettiest or the most \"enterprise\" tool, but it's the one I end up using when I need something done fast. The node-based UI and self-host option make it easy to iterate without locking into a vendor."
+}

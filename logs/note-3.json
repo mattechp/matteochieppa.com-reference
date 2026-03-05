@@ -1,0 +1,7 @@
+{
+  "id": "note-3",
+  "date": "2026-02-10",
+  "dateTime": "2026-02-10T14:22:00Z",
+  "category": "technical",
+  "content": "Local inference is changing the whole conversation. When you can run a capable model on your own hardware, questions about privacy, cost, and latency get answered differently. No more \"send it to the cloud\" by default—you choose where it runs. That shift is already visible in dev tools and will reach product soon."
+}
