@@ -1,0 +1,503 @@
+---
+title: "La guida definitiva a Claude Code per il 2026: dal setup ai workflow agentici per la produzione"
+date: "2026-02-28"
+category: "tech"
+tags: ["Claude Code", "Anthropic", "AI Coding Agent", "Developer Tools", "MCP", "Agentic AI", "Plugins", "Subagents"]
+excerpt: "Guida completa Claude Code 2026: installazione, CLAUDE.md, hooks, subagent, plugin, worktree, server MCP, hardening e workflow di produzione."
+readTime: "25 min"
+lang: "it"
+---
+
+**Claude Code has evolved from a terminal autocomplete tool into a full agent orchestration framework. Here's everything you need to master it — installation, architecture, plugins, hooks, subagents, worktrees, and battle-tested configs from the community.**
+
+> **Meta Description:** Complete Claude Code 2026 guide: installation, CLAUDE.md, hooks, subagents, plugins, worktrees, MCP servers, security hardening, and production workflows.
+>
+> **Tags:** Claude Code, Anthropic, AI Coding Agent, Developer Tools, MCP, Agentic AI, Plugins, Subagents
+>
+> **Estimated Reading Time:** 25 minutes
+
+---
+
+## Introduction
+
+On March 3, 2026, Anthropic shipped native voice mode for Claude Code. Type `/voice` in your terminal, speak your coding instruction, and an autonomous agent writes, tests, and commits the implementation. The feature rolled out to 5% of users on day one, and according to TechCrunch, the announcement tweet from Anthropic engineer Thariq Shihipar hit 707,000 views and 7,000 likes within hours.
+
+This is not the Claude Code from six months ago.
+
+What started as a terminal-based coding assistant has matured into a **full agent orchestration framework** — with a plugin marketplace of over 9,000 extensions, native git worktree isolation for parallel development, four types of hooks (command, HTTP, prompt, and agent), subagent delegation with specialized models, and a 1M token context window in beta for Opus 4.6. The ecosystem now includes remote monitoring from the Claude mobile app, automated memory persistence across sessions, and the `everything-claude-code` community config repo at 35,600 GitHub stars.
+
+If you're still treating Claude Code as a souped-up autocomplete, you're leaving 90% of its value on the table.
+
+This article is the comprehensive guide: from a clean installation through production-grade agentic workflows. We'll cover the architecture that makes Claude Code different from Copilot and Cursor, the CLAUDE.md configuration system, the full hooks lifecycle, how to build and deploy subagents, practical MCP server integration, security hardening, and real configurations battle-tested across production applications. Whether you're a solo developer looking to 5x your output or a team lead standardizing AI workflows across an engineering org, this is your reference.
+
+---
+
+## Context & Background
+
+### The Evolution of AI Coding Tools
+
+The AI-assisted coding timeline has three distinct phases. **Phase 1 (2021–2023)** was autocomplete: GitHub Copilot, Tabnine, and similar tools predicted the next few lines of code. Useful, but fundamentally passive. **Phase 2 (2023–2025)** was chat-in-IDE: tools like Cursor, Cody, and the original Claude Code let you ask questions about your codebase and generate multi-line implementations. Better, but still reactive — you prompt, it responds, you paste.
+
+**Phase 3 (2025–present)** is **agentic coding**: the tool reads your codebase autonomously, plans multi-step implementations, executes them across files, runs tests, interprets failures, iterates, and commits — all with minimal human intervention. Claude Code in 2026 is firmly in Phase 3.
+
+### What Makes Claude Code Different
+
+Claude Code is a **terminal-native, long-running Node.js process** that connects directly to Anthropic's models (or local models via compatible endpoints). Unlike IDE-embedded tools, it operates at the filesystem and shell level — it can read files, write files, run arbitrary shell commands, manage git operations, and invoke external tools through MCP (Model Context Protocol) servers.
+
+The key architectural concepts you need to understand:
+
+**CLAUDE.md** — A Markdown file in your project root that acts as persistent memory. Claude reads it at session start and uses it for all architectural decisions. Think of it as a `README` written specifically for your AI agent.
+
+**Hooks** — User-defined handlers that execute automatically at fixed points in Claude Code's lifecycle: before tool use, after tool use, on session start/stop, before compaction, and more. Four types: command (shell), HTTP, prompt (AI evaluation), and agent (subagent with tool access).
+
+**Subagents** — Specialized AI agents that Claude delegates work to. Each has its own system prompt, tool restrictions, and optionally a different model. They run in isolated context, preventing long tasks from polluting your main conversation.
+
+**Skills** — Workflow definitions that Claude activates automatically when relevant to the current task. Unlike slash commands (which you trigger manually), skills are proactive.
+
+**Plugins** — Distributable packages that bundle commands, agents, skills, hooks, and MCP configs. Install with one command. The marketplace has over 9,000 entries as of March 2026.
+
+**MCP Servers** — External tool integrations (GitHub, Supabase, Vercel, databases, browsers) that give Claude capabilities beyond the local filesystem.
+
+---
+
+## Current State & Latest Developments
+
+### March 2026: Voice Mode, Opus 4.6, and the Plugin Explosion
+
+The pace of Claude Code releases in early 2026 has been relentless. Here's what shipped:
+
+**Voice Mode (March 3, 2026)** — Native speech-to-text input via the `/voice` slash command. Rolling out gradually to all users. Anthropic hasn't disclosed the underlying STT model, but it follows OpenAI's Codex shipping voice (via Wispr Flow engine) on February 26 — making voice-first coding a genuine trend, not a gimmick.
+
+**Opus 4.6 (February 2026)** — Anthropic's most capable model, with improved coding skills and a **1M token context window** now available in fast mode. The model selection is critical: Opus 4.6 for complex architecture decisions, Sonnet 4.6 for everyday coding (faster, cheaper), Haiku 4.5 for quick reviews and lightweight tasks.
+
+**Git Worktree Isolation (February 21, 2026)** — The `--worktree` (`-w`) flag launches Claude in an isolated git worktree. Subagents now support `isolation: "worktree"` in their YAML frontmatter, enabling parallel development where multiple agents work on different branches simultaneously without interfering.
+
+**HTTP Hooks (Late February 2026)** — In addition to shell command hooks, you can now POST JSON to a URL and receive JSON back. This enables external validation services, CI/CD integrations, and centralized audit logging without writing shell scripts.
+
+**Plugin Ecosystem Milestones** — The marketplace crossed 9,000 plugins. Notable additions include agent team plugins that leverage Opus 4.6's multi-agent capabilities, worktree management plugins, and full-stack review plugins that spawn five parallel subagents (security, testing, type safety, code quality, simplification).
+
+**Auto-Memory (February 2026)** — Claude now automatically saves useful context to memory without explicit `/memory` commands. This complements the CLAUDE.md system with dynamic session-to-session learning.
+
+**Bundled Slash Commands** — `/simplify` (simplify complex code) and `/batch` (process multiple items) shipped as built-in commands, joining `/plan`, `/cost`, `/memory`, `/resume`, `/model`, and `/voice`.
+
+### Pricing Landscape
+
+Understanding the cost model is essential for production planning:
+
+| Plan | Price | Claude Code Access | Key Limit |
+|------|-------|-------------------|-----------|
+| **Free** | $0 | No | — |
+| **Pro** | $20/mo | Yes | ~45 Opus msgs/5hr window |
+| **Max 5x** | $100/mo | Yes | ~225 msgs/5hr window |
+| **Max 20x** | $200/mo | Yes | ~900 msgs/5hr window |
+| **API** | Pay-per-token | Yes (BYOK) | No rate limits, just cost |
+
+A typical medium coding session via API (reading files, making changes, running tests) costs roughly $0.50–$3.00 with Sonnet 4.6. If your monthly API costs exceed $60–80, the Max 5x plan is the better deal. Prompt caching (90% cheaper for cache reads) and auto-compaction significantly reduce costs in long sessions.
+
+---
+
+## Deep Technical Analysis
+
+### The CLAUDE.md System: Your Agent's Memory
+
+The single most impactful configuration in Claude Code is the **CLAUDE.md** file. When Claude starts a session, it parses this file first, using it as persistent context for every decision.
+
+CLAUDE.md files cascade from three levels:
+
+1. **Project-level** (`.claude/CLAUDE.md` or `CLAUDE.md` in repo root) — Shared with your team via git. Highest priority for project-specific context.
+2. **User-level** (`~/.claude/CLAUDE.md`) — Personal preferences, coding style, model selection rules. Applies to all projects.
+3. **Directory-level** — CLAUDE.md files in subdirectories provide context when Claude is working in that area.
+
+Here's a production-grade example adapted from the `everything-claude-code` repo:
+
+```markdown
+# Project: SaaS Dashboard
+
+## Tech Stack
+- Next.js 15 (App Router), TypeScript strict mode
+- Tailwind CSS + shadcn/ui components
+- Supabase (PostgreSQL + Auth + Realtime)
+- Vercel deployment
+
+## Architecture Rules
+- All API routes use Route Handlers in app/api/
+- Server Components by default; use "use client" only when necessary
+- Database access through typed Supabase client (lib/supabase/server.ts)
+- No raw SQL — use Supabase query builder
+
+## Coding Conventions
+- Functional components only, no class components
+- Prefer named exports over default exports
+- Use Zod schemas for all input validation
+- Error boundaries at route layout level
+
+## Commands
+- `pnpm dev` — Start development server
+- `pnpm test` — Run Vitest test suite
+- `pnpm lint` — ESLint + Prettier check
+- `pnpm db:migrate` — Run Supabase migrations
+
+## Security Rules
+- Never commit .env files or API keys
+- All user input must be validated with Zod before database operations
+- Use Supabase RLS policies — never bypass them
+- Require approval before any destructive git operations
+```
+
+### Hooks: The Four Types
+
+Hooks are the deterministic layer in Claude Code — they **always** run when configured, regardless of model behavior. This is what separates Claude Code from a chatbot: you can enforce invariants.
+
+The hook lifecycle has 12 event types, but the most practically important are:
+
+**PreToolUse** — Fires before Claude executes a tool (Read, Edit, Bash, etc.). You can block the action, modify it, or inject context. This is where you enforce security policies.
+
+**PostToolUse** — Fires after a tool executes. Use for audit logging, output validation, or triggering downstream actions.
+
+**Stop** — Fires when Claude finishes responding. You can force it to continue (preventing premature completion) or inject final validation.
+
+**Notification** — Fires on permission prompts, idle prompts, and auth events.
+
+Each event supports four handler types:
+
+```
+┌─────────────┬────────────────────────────────────────────┐
+│ Type        │ How it Works                               │
+├─────────────┼────────────────────────────────────────────┤
+│ command     │ Runs a shell script, reads exit code + JSON│
+│ http        │ POSTs JSON to a URL, reads JSON response   │
+│ prompt      │ Sends context to a Claude model (Haiku)    │
+│             │ for a single-turn yes/no decision           │
+│ agent       │ Spawns a subagent (up to 50 tool-use turns)│
+│             │ that can inspect the codebase before        │
+│             │ returning a decision                        │
+└─────────────┴────────────────────────────────────────────┘
+```
+
+Here's a practical PreToolUse hook that prevents commits to main/master:
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"const input = JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); const cmd = input.tool_input?.command || ''; if (/git\\s+(push|commit)/.test(cmd) && /(\\bmain\\b|\\bmaster\\b)/.test(cmd)) { process.stderr.write('BLOCKED: Direct commits to main/master are not allowed. Create a feature branch.'); process.exit(2); }\""
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Exit code semantics: `0` = approve, `2` = block (stderr shown as reason), any other = non-blocking error.
+
+### Subagents and Worktree Isolation
+
+Subagents are where Claude Code becomes a true orchestration framework. Instead of running everything in a single, ever-growing context, you delegate specialized work to focused agents.
+
+A subagent definition is a Markdown file with YAML frontmatter:
+
+```yaml
+---
+name: security-reviewer
+description: Analyzes code for security vulnerabilities, injection risks, and auth issues
+tools:
+  - Read
+  - Grep
+  - Glob
+  - Bash
+model: opus
+isolation: worktree
+---
+
+You are a senior security engineer. Your job is to identify vulnerabilities,
+not fix them. Report findings using this severity format:
+
+🔴 CRITICAL - Exploitable in production, data loss possible
+🟠 HIGH - Significant risk, should fix before merge
+🟡 MEDIUM - Defense-in-depth issue, fix within sprint
+🔵 LOW - Best practice recommendation
+
+For each finding, provide:
+1. File path and line number
+2. Vulnerability type (OWASP category)
+3. Proof of concept or attack scenario
+4. Recommended fix
+```
+
+The `isolation: worktree` directive is the key 2026 addition. When this subagent runs, Claude creates a temporary git worktree, executes the review in complete isolation, then destroys the worktree on completion. The main session's working directory is never touched. This enables a powerful pattern: **spawn multiple worktree-isolated subagents in parallel**, each working on a different aspect of the codebase.
+
+### The MCP Integration Layer
+
+MCP (Model Context Protocol) servers extend Claude Code's capabilities beyond the local filesystem. Each server exposes tools that Claude can invoke during a session.
+
+A critical operational concern from the `everything-claude-code` repo: **don't enable all MCPs at once**. Each server's tool definitions are loaded into your context window at session start. With 20+ MCP servers active, your 200K context window can shrink to 70K before you even send your first message.
+
+The recommended approach from the community:
+
+- Have 20–30 MCPs **configured** in your `~/.claude.json`
+- Keep **under 10 enabled** per project
+- Keep **under 80 total tools** active
+- Use `disabledMcpServers` in project config to selectively disable unused ones
+
+```json
+{
+  "mcpServers": {
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": { "GITHUB_TOKEN": "YOUR_TOKEN" }
+    },
+    "supabase": {
+      "command": "npx",
+      "args": ["-y", "@supabase/mcp-server-supabase@latest"],
+      "env": { "SUPABASE_ACCESS_TOKEN": "YOUR_TOKEN" }
+    }
+  }
+}
+```
+
+---
+
+## Hands-On: Production Setup from Scratch
+
+### Prerequisites
+
+- **Node.js 18+** (LTS recommended)
+- A **Claude Pro, Max, or API** subscription
+- **Git** configured with your credentials
+- A code project to work with
+
+### Step 1: Installation
+
+The native CLI installer is the recommended path for macOS and Linux:
+
+```bash
+# Native installer — handles binary paths and auto-updates
+curl -fsSL https://claude.ai/install.sh | bash
+
+# Verify installation
+claude --version
+# Should show v2.1.x or later (required for plugins)
+```
+
+For npm environments (or Windows via WSL2):
+
+```bash
+npm install -g @anthropic-ai/claude-code
+```
+
+### Step 2: Authentication and Initial Configuration
+
+```bash
+cd your-project
+claude
+
+# You'll be prompted to authenticate:
+# Option A: Claude Pro/Max subscription (browser OAuth)
+# Option B: API key from platform.claude.com
+```
+
+Immediately after authentication, harden your security config:
+
+```bash
+# Edit the global settings
+nano ~/.claude/settings.json
+```
+
+```json
+{
+  "permissions": {
+    "deny": [
+      "Bash(docker rm*)",
+      "Bash(rm -rf /)",
+      "Bash(git push origin main)",
+      "Bash(git push origin master)"
+    ]
+  }
+}
+```
+
+### Step 3: Install the everything-claude-code Plugin
+
+The `everything-claude-code` repo (35,600 stars, MIT licensed) by Anthropic hackathon winner Affaan Mustafa is the most comprehensive community configuration collection. Install it as a plugin:
+
+```bash
+# Inside Claude Code, run:
+/plugin marketplace add affaan-m/everything-claude-code
+
+# Install the plugin
+/plugin install everything-claude-code@everything-claude-code
+```
+
+This gives you immediate access to all slash commands (`/tdd`, `/plan`, `/code-review`, `/build-fix`, `/e2e`, `/verify`, `/learn`, and more), specialized subagents (planner, architect, security-reviewer, code-reviewer, TDD guide, build-error-resolver, e2e-runner, doc-updater, Go reviewer), and the continuous learning system.
+
+**Important:** Rules can't be distributed via plugins (upstream limitation). Install them manually:
+
+```bash
+git clone https://github.com/affaan-m/everything-claude-code.git
+cp -r everything-claude-code/rules/* ~/.claude/rules/
+```
+
+### Step 4: Create Your CLAUDE.md
+
+In your project root, create a CLAUDE.md tailored to your stack:
+
+```bash
+cat &gt; CLAUDE.md &lt;&lt; 'EOF'
+# Project Context
+
+## Stack
+[Your tech stack here]
+
+## Commands
+- `[your dev command]` — Start dev server
+- `[your test command]` — Run tests
+
+## Conventions
+- [Your coding style rules]
+- [Your file organization rules]
+
+## Security
+- Never commit secrets
+- Validate all inputs
+- Require approval for destructive operations
+EOF
+```
+
+### Step 5: Configure Hooks for Memory Persistence
+
+The `everything-claude-code` repo includes hooks that automatically save and load context across sessions. The hooks are in `hooks/hooks.json` and auto-load when the plugin is installed. The memory persistence system uses three scripts:
+
+- **session-start.js** — Loads previous session context on startup
+- **session-end.js** — Saves current state when the session terminates
+- **pre-compact.js** — Preserves state before context compaction (when the conversation gets too long)
+
+### Step 6: Verify and Test
+
+```bash
+# Inside Claude Code:
+/cost                    # Check token usage
+/model                   # See active model
+claude agents            # List all configured agents
+/plan "Add user auth"    # Test plan mode
+```
+
+---
+
+## Real-World Case Studies
+
+### Case 1: Hackathon Winning Workflow
+
+Affaan Mustafa won the Anthropic × Forum Ventures hackathon in September 2025 building [zenith.chat](https://zenith.chat) — entirely using Claude Code. The approach that won: **subagent delegation with TDD enforcement**. The `/tdd` command triggers a workflow that writes failing tests first (RED), implements minimal code to pass (GREEN), then refactors (IMPROVE). A separate code-reviewer subagent runs after each cycle, catching issues before they compound. The continuous learning system (`/learn`) extracts patterns from each session into reusable skills, so the agent gets progressively smarter about the project.
+
+### Case 2: Enterprise Digital Transformation
+
+A digital transformation project for a decades-old wholesale business in the HORECA sector uses Claude Code with local models via Ollama for sensitive legacy system integration. The team configured Claude Code to point its backend to a localhost Ollama instance running a high-capability coding model, getting the autonomous agent UX with zero data egress. The CLAUDE.md file documents the AS400 infrastructure, EDI integration patterns, and strict compliance rules. Subagents handle OCR-based order processing and PDF parsing, while hooks enforce that no database write operations execute without explicit human approval.
+
+### Case 3: The Context Window Trap
+
+A developer running Claude Code with 15 MCP servers enabled discovered their 200K context window had shrunk to approximately 70K before writing any code. Every MCP server loads its full tool schema at session start, consuming context tokens silently. After disabling non-essential MCPs and using `disabledMcpServers` in the project config, effective context increased to 180K. The lesson (documented in the `everything-claude-code` repo): keep under 10 MCPs enabled per project and under 80 total tools active.
+
+---
+
+## Security & Risk Considerations
+
+### Default Permissions Are Dangerously Broad
+
+Out of the box, Claude Code has highly permissive execution rights. It can run arbitrary shell commands, write to any file in your project, and execute git operations. Your first action after installation should be configuring `~/.claude/settings.json` to restrict dangerous operations.
+
+### Credential Exposure
+
+Claude Code reads your environment variables and can access any credentials available in your shell session. If you're using MCP servers, API keys are stored in `~/.claude.json` — sometimes in plaintext. Use environment variables with a secrets manager rather than hardcoding tokens in config files.
+
+### Plugin Supply Chain Risk
+
+The plugin marketplace has over 9,000 entries with no mandatory code signing or security review. Before installing any plugin, review its source on GitHub. This mirrors the ClawHub supply chain risks documented in the OpenClaw ecosystem — third-party agent extensions are fundamentally untrusted code execution.
+
+### Hardening Checklist
+
+1. **Restrict destructive commands** in `settings.json` — deny `docker rm`, `rm -rf`, direct pushes to main/production branches
+2. **Set API spending limits** — both in the `settings.json` and at the provider level on platform.claude.com
+3. **Use PreToolUse hooks** to validate Bash commands before execution. The agent-type hook is particularly powerful: spawn a security subagent that inspects the proposed command before approving it
+4. **Never run Claude Code as root** or with elevated privileges
+5. **Use `CLAUDE_CODE_SIMPLE` mode** for untrusted projects — this disables MCP tools, attachments, hooks, and CLAUDE.md loading for a minimal attack surface
+6. **Audit MCP server permissions** — each server gets the tool access you grant it. Restrict to the minimum necessary
+
+### Compliance Considerations
+
+For GDPR/NIS2 compliance: when using Claude Code with Anthropic's cloud models, your code and conversation context is transmitted to Anthropic's servers. For sensitive codebases, use the API with data residency controls (the `inference_geo` parameter lets you specify US-only inference at 1.1x pricing) or route through a local model via Ollama for zero-egress operation. Anthropic now offers HIPAA-ready Enterprise plans for organizations processing protected health information.
+
+---
+
+## Future Outlook & Predictions
+
+### Agent Teams (Q2 2026)
+
+The Opus 4.6 release included foundations for **Agent Teams** — coordinated multi-agent systems where specialized agents work together on complex tasks. The early implementation includes `TaskUpdate` and `TaskComplete` hook events, team-scoped subagent stop hooks, and teammate idle detection. Expect mature agent team plugins to emerge in the next 3-6 months, enabling workflows like: one agent writes code, another reviews it, a third writes tests, a fourth handles documentation — all coordinated through the team protocol.
+
+### Cowork Expands Beyond macOS
+
+Cowork — which brings Claude Code's agentic capabilities to the Claude desktop app for non-coding knowledge work — is currently macOS-only for Pro users. Anthropic is clearly positioning plugins as a universal customization layer across all Claude products, not just the terminal. Cross-platform Cowork and deeper plugin integration are likely by mid-2026.
+
+### Voice-First Development Matures
+
+With both Claude Code and Codex shipping voice within a week of each other (February 26 and March 3, 2026), voice-first coding is no longer experimental. Expect voice mode to become the default input method for high-level instructions ("refactor the auth module to use JWT tokens instead of sessions") while keyboard remains for precise edits.
+
+### The Plugin Ecosystem Consolidation
+
+At 9,000+ plugins and growing, the ecosystem needs curation. The community is already self-organizing: the `awesome-claude-code` repo (by hesreallyhim) curates the best skills, hooks, and orchestrators. Expect Anthropic to introduce verified plugins, security scanning, and possibly a trust tier system similar to what ClawHub is learning to implement for OpenClaw.
+
+---
+
+## Key Takeaways & Actionable Summary
+
+- **Create a CLAUDE.md file immediately** if you haven't already. This single file has more impact on Claude Code's usefulness than any other configuration. Include your stack, conventions, commands, and security rules.
+
+- **Install the everything-claude-code plugin** (`/plugin marketplace add affaan-m/everything-claude-code`). It gives you battle-tested agents, hooks, skills, and commands from an Anthropic hackathon winner. 35,600 stars for a reason.
+
+- **Use subagents for specialized work.** Don't run everything in your main context. Delegate code review, security analysis, testing, and documentation to purpose-built agents with `isolation: worktree` for clean parallel execution.
+
+- **Manage your MCP server budget.** Keep under 10 enabled per project, under 80 tools active. Use `disabledMcpServers` aggressively. Your context window is finite.
+
+- **Harden your security config on day one.** Deny destructive bash commands. Set API spending limits. Use PreToolUse hooks for validation. Never run as root.
+
+- **Use Plan Mode (`/plan` or Shift+Tab) before complex tasks.** Let the agent analyze the codebase and produce an execution plan you review before any files change.
+
+- **Use Remote Control for long tasks.** With a Max subscription (v2.1.52+), start a build, walk away, and monitor/approve from the Claude mobile app.
+
+- **Pick the right model for the task:** Opus 4.6 for architecture decisions and complex reasoning, Sonnet 4.6 for everyday coding (default for most work), Haiku 4.5 for quick checks and lightweight reviews.
+
+---
+
+## Resources & Further Reading
+
+**Official**
+- [Claude Code Documentation](https://code.claude.com/docs) — The canonical reference for all features, hooks, plugins, and configuration.
+- [Claude Code Releases](https://github.com/anthropics/claude-code/releases) — Changelog with every feature addition and bug fix.
+- [Claude Code Pricing](https://www.anthropic.com/pricing) — Current Pro ($20), Max 5x ($100), and Max 20x ($200) plan details.
+
+**Community Configs & Plugins**
+- [everything-claude-code](https://github.com/affaan-m/everything-claude-code) — The 35.6K-star community config collection. Agents, skills, hooks, commands, rules, and MCP configs. MIT licensed. **Start here for production configs.**
+- [awesome-claude-code](https://github.com/hesreallyhim/awesome-claude-code) — Curated list of the best skills, hooks, slash commands, orchestrators, and plugins.
+- [Build with Claude Plugin Marketplace](https://www.buildwithclaude.com/) — Browse community plugins, subagents, and commands.
+
+**Guides & Learning**
+- [The Shorthand Guide to Everything Claude Code](https://x.com/affaanmustafa/status/2012378465664745795) — By the everything-claude-code author. Setup, foundations, philosophy. Read first.
+- [The Longform Guide to Everything Claude Code](https://x.com/affaanmustafa/status/2014040193557471352) — Token optimization, memory persistence, evals, parallelization. Read second.
+- [Understanding Claude Code's Full Stack](https://alexop.dev/posts/understanding-claude-code-full-stack/) — Excellent deep-dive on how MCP, Skills, Subagents, Hooks, and Plugins interconnect.
+- [Claude Code Cheatsheet](https://awesomeclaude.ai/code-cheatsheet) — Comprehensive quick-reference for all commands, keyboard shortcuts, and config options.
+
+**Tools**
+- [claude-tmux](https://github.com/nielsgl/claude-tmux) — Manage multiple Claude Code instances within tmux with quick switching and status monitoring.
+- [claude-esp](https://github.com/phiat/claude-esp) — Go-based TUI that streams Claude Code's hidden output (thinking, tool calls, subagents) to a separate terminal.
+- [Crystal](https://github.com/stravu/crystal) — Desktop application for orchestrating and monitoring Claude Code agents.
+
+---
+
+*This article reflects the Claude Code ecosystem as of March 4, 2026. The tool ships updates multiple times per week — run `claude --version` and check the official changelog for the latest. Voice mode is still in gradual rollout; Agent Teams are available with Opus 4.6 but still maturing. All code examples are functional with Claude Code v2.1.x+.*
