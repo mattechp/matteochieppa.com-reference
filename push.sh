@@ -13,6 +13,11 @@ if [ ! -d .git ]; then
   git remote add origin "$REMOTE"
 fi
 
+# Pull before push to avoid overwriting dashboard-origin changes (when remote has main)
+if git remote get-url origin &>/dev/null && git ls-remote --exit-code origin main &>/dev/null; then
+  git fetch origin main && git rebase origin/main
+fi
+
 # Add all changes (Git will automatically ignore .gitignore and push.sh now)
 git add .
 

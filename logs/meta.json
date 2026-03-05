@@ -1,5 +1,10 @@
 {
   "description": "Thoughts and things I notice. Not long enough for a post, too interesting to keep to myself. I write them here with the date.",
   "notesIntro": "Scattered thoughts, opinions on tools, things I notice. No claim to be right—just things that seemed worth writing down.",
-  "updated": "2026-03-01"
+  "updated": "2026-03-01",
+  "categories": [
+    { "id": "tool", "label": "Tool / stack" },
+    { "id": "product", "label": "Product / ops" },
+    { "id": "technical", "label": "Technical / infra" }
+  ]
 }

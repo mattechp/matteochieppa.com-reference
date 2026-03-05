@@ -1,7 +1,7 @@
 {
   "id": "note-4",
   "date": "2026-03-01",
-  "dateTime": "2026-03-01T14:00:00Z",
-  "category": "product",
+  "dateTime": "2026-03-01T15:00:00Z",
+  "category": "technical",
   "content": "Wrapping up v0.1.0 of the site. Semantic versioning from here on. For anyone who reads this far: I left something in the build for you. No spoilers."
 }
